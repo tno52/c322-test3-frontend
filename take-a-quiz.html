@@ -20,6 +20,7 @@
       <h3>Here are the list of all available quizzes. Click on a quiz to start taking the quiz.</h3>
 
       <div id="list" class="cards"></div>
+      <script src="configuration.js"></script>
 
       <script>
         let host = "http://localhost:8080";
@@ -27,7 +28,12 @@
         displayTheQuizzes();
   
         async function getAll() {
-          let response = await fetch(host + "/quizzes");
+        
+            let response = await fetch(host + "/quizzes", {
+            headers: {
+            "Authorization": `Bearer ${configuration.token()}`
+        }
+         });
           let result = await response.json();
           return result;
         }

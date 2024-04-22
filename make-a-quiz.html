@@ -37,6 +37,7 @@
       </h3>
       <div id="quiz"></div>
     </div>
+    <script src="configuration.js"></script>
 
     <script>
       let host = "http://localhost:8080";
@@ -51,56 +52,73 @@
       displayTheQuestions();
 
       async function getAll() {
-        let response = await fetch(host + "/questions");
-        let result = await response.json();
-        return result;
-      }
-
-      async function displayTheQuestions() {
-        if (questions.length == 0) {
-          questions = await getAll();
-        }
-        list.innerHTML = "";
-        for (let question of questions) {
-          let div = document.createElement("div");
-          div.id = `${question.id}`;
-          div.onclick = function () {
-            if (div.parentNode.id == "list") {
-              quiz.appendChild(div);
-              quizQuestions.push(div.id);
-            } else {
-              list.appendChild(div);
-              const index = quizQuestions.indexOf(div.id);
-              quizQuestions.splice(index, 1);
+    try {
+        let response = await fetch(host + "/questions", {
+            headers: {
+                "Authorization": `Bearer ${configuration.token()}`
             }
-            let n = quiz.childElementCount;
-            quizHeader.innerText = `The new quiz(${n} questions)`;
-            console.log(quizQuestions);
-          };
-          div.className = "card";
-          let innerHtml = `
-       
-      <img src="http://localhost:8080/questions/${question.id}/image" alt="question" style="width:100%">
-      <div class="container">
-        <h4><b>${question.id}</b></h4> 
-        <p>${question.description}</p>
-        <form>
-            <input type="radio" id="q${question.id}ptionA" name="q2Answer" value="A">
-            <label for="q${question.id}ptionA">${question.choices[0]}</label><br>
-
-            <input type="radio" id="q${question.id}ptionB" name="q2Answer" value="B">
-            <label for="q${question.id}ptionB">${question.choices[1]}</label><br>
-
-            <input type="radio" id="q${question.id}ptionC" name="q2Answer" value="C">
-            <label for="q${question.id}ptionC">${question.choices[2]}</label><br>       
-        </form> 
-      </div>
-   
-          `;
-          div.innerHTML = innerHtml;
-          list.appendChild(div);
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
         }
-      }
+        return await response.json();
+    } catch (error) {
+        console.error("Error Fetching Questions:", error.message);
+        return [];  
+    }
+}
+
+
+async function displayTheQuestions() {
+    if (questions.length == 0) {
+      questions = await getAll();
+    }
+
+    let list = document.getElementById("list");
+    list.innerHTML = "";
+
+    for (let question of questions) {
+      let div = document.createElement("div");
+      div.className = "card";
+      let innerHtml = `
+        <img src="" alt="question" style="width:100%" id="question-image-${question.id}">
+        <div class="container">
+          <h4><b>${question.id}</b></h4> 
+          <p>${question.description}</p>
+          <form>
+              <input type="radio" id="q${question.id}ptionA" name="q2Answer" value="A">
+              <label for="q${question.id}ptionA">${question.choices[0]}</label><br>
+
+              <input type="radio" id="q${question.id}ptionB" name="q2Answer" value="B">
+              <label for="q${question.id}ptionB">${question.choices[1]}</label><br>
+
+              <input type="radio" id="q${question.id}ptionC" name="q2Answer" value="C">
+              <label for="q${question.id}ptionC">${question.choices[2]}</label><br>       
+          </form> 
+        </div>
+      `;
+      div.innerHTML = innerHtml;
+      list.appendChild(div);
+
+      let imgElement = document.getElementById(`question-image-${question.id}`);
+      fetch(`${host}/questions/${question.id}/image`, {
+        headers: { "Authorization": `Bearer ${configuration.token()}` },
+      })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.blob();
+      })
+      .then((blob) => {
+        let imageUrl = URL.createObjectURL(blob);
+        imgElement.src = imageUrl;
+      })
+      .catch((error) => {
+        console.error("There was a problem fetching the image:", error);
+      });
+    }
+  }
 
       async function saveTheQuiz() {
         let quizTitle = document.getElementById("quizTitle").value;
@@ -112,6 +130,7 @@
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              "Authorization": `Bearer ${configuration.token()}`
             },
             body: JSON.stringify({"title": quizTitle, "questionIds": quizQuestions}),
           };
@@ -121,6 +140,7 @@
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
+              "Authorization": `Bearer ${configuration.token()}`
             },
             body: JSON.stringify({"id": quizId, "title": quizTitle, "questionIds": quizQuestions}),
           };

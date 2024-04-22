@@ -57,6 +57,7 @@
     </form>
 
     <div id="list" class="cards"></div>
+    <script src="configuration.js"></script>
 
     <script>
       let host = "http://localhost:8080";
@@ -64,25 +65,32 @@
       displayTheQuestions();
 
       async function getAll() {
-        let response = await fetch(host + "/questions");
+        let response = await fetch(host + "/questions", {
+        headers: {
+            "Authorization": `Bearer ${configuration.token()}`
+        }
+       });
+         if (response.ok) {
         let result = await response.json();
         return result;
+         } else {
+        console.error('Error Fetching Questions:', response.statusText);
+        return [];  
       }
+    }
+    async function displayTheQuestions() {
+    if (questions.length == 0) {
+      questions = await getAll();
+    }
 
-      async function displayTheQuestions() {
-        if (questions.length == 0) {
-          questions = await getAll();
-        }
+    let list = document.getElementById("list");
+    list.innerHTML = "";
 
-        let list = document.getElementById("list");
-        list.innerHTML = "";
-
-        for (let question of questions) {
-          let div = document.createElement("div");
-          div.className = "card";
-          let innerHtml = `
-         
-        <img src="http://localhost:8080/questions/${question.id}/image" alt="question" style="width:100%">
+    for (let question of questions) {
+      let div = document.createElement("div");
+      div.className = "card";
+      let innerHtml = `
+        <img src="" alt="question" style="width:100%" id="question-image-${question.id}">
         <div class="container">
           <h4><b>${question.id}</b></h4> 
           <p>${question.description}</p>
@@ -97,12 +105,30 @@
               <label for="q${question.id}ptionC">${question.choices[2]}</label><br>       
           </form> 
         </div>
-     
-            `;
-          div.innerHTML = innerHtml;
-          list.appendChild(div);
+      `;
+      div.innerHTML = innerHtml;
+      list.appendChild(div);
+
+      let imgElement = document.getElementById(`question-image-${question.id}`);
+      fetch(`${host}/questions/${question.id}/image`, {
+        headers: { "Authorization": `Bearer ${configuration.token()}` },
+      })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
         }
-      }
+        return response.blob();
+      })
+      .then((blob) => {
+        let imageUrl = URL.createObjectURL(blob);
+        imgElement.src = imageUrl;
+      })
+      .catch((error) => {
+        console.error("There was a problem fetching the image:", error);
+      });
+    }
+  }
+
 
       function add() {
         let form = document.forms[0];
@@ -133,6 +159,7 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": 'Bearer  ${configuration.token()}'
           },
           body: JSON.stringify(question),
         };
